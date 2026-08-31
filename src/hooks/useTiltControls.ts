@@ -1,7 +1,11 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import type { CardOutcome } from '../game/round'
 import {
+  FOREHEAD_MAX_TILT_DEGREES,
+  FOREHEAD_MIN_SAMPLES,
+  FOREHEAD_STABILITY_DEGREES,
   getFaceTiltDegrees,
+  getForeheadCalibration,
   getMotionFaceTiltDegrees,
   getTiltOutcome,
   TILT_NEUTRAL_DEGREES,
@@ -18,8 +22,8 @@ interface SensorEventConstructorWithPermission {
   requestPermission?: () => Promise<'granted' | 'denied'>
 }
 
-const CALIBRATION_SAMPLES = 8
 const ACTION_COOLDOWN_MS = 650
+const PLACEMENT_GRACE_MS = 750
 
 export const requestMotionPermission = async (): Promise<SensorPermission> => {
   const constructors: SensorEventConstructorWithPermission[] = []
@@ -70,6 +74,7 @@ interface UseTiltControlsOptions {
   actionsEnabled?: boolean
   debugEnabled?: boolean
   onAction: (outcome: CardOutcome) => void
+  onReady?: () => void
 }
 
 export interface TiltTelemetry {
@@ -90,11 +95,15 @@ export const useTiltControls = ({
   actionsEnabled = enabled,
   debugEnabled = false,
   onAction,
+  onReady,
 }: UseTiltControlsOptions) => {
   const [sensorReady, setSensorReady] = useState(false)
+  const [sensorDetected, setSensorDetected] = useState(false)
+  const [calibrationSamples, setCalibrationSamples] = useState(0)
   const [telemetry, setTelemetry] = useState<TiltTelemetry | null>(null)
   const [calibrationVersion, setCalibrationVersion] = useState(0)
   const onTiltAction = useEffectEvent(onAction)
+  const onSensorReady = useEffectEvent(() => onReady?.())
   const canTriggerAction = useEffectEvent(() => actionsEnabled)
   const publishTelemetry = useEffectEvent((snapshot: TiltTelemetry) => {
     if (debugEnabled) {
@@ -108,21 +117,23 @@ export const useTiltControls = ({
     }
 
     let baseline: number | null = null
-    let calibrationTotal = 0
-    let calibrationCount = 0
+    let calibrationValues: number[] = []
+    let calibrationStartedAt: number | null = null
     let armed = true
     let lastActionAt = 0
     let lastTelemetryAt = 0
     let activeSource: TiltTelemetry['source'] | null = null
     let lastOrientationAt = 0
+    let receivedSensorSample = false
     const monitoringStartedAt = performance.now()
 
     const resetCalibration = () => {
       baseline = null
-      calibrationTotal = 0
-      calibrationCount = 0
+      calibrationValues = []
+      calibrationStartedAt = null
       armed = true
       setSensorReady(false)
+      setCalibrationSamples(0)
     }
 
     const reportTelemetry = (
@@ -147,7 +158,10 @@ export const useTiltControls = ({
         faceTilt,
         baseline,
         offset,
-        calibrationSamples: calibrationCount,
+        calibrationSamples: Math.min(
+          calibrationValues.length,
+          FOREHEAD_MIN_SAMPLES,
+        ),
         armed,
       })
     }
@@ -164,13 +178,50 @@ export const useTiltControls = ({
         return
       }
 
-      if (baseline === null) {
-        calibrationTotal += axis
-        calibrationCount += 1
+      if (!receivedSensorSample) {
+        receivedSensorSample = true
+        setSensorDetected(true)
+      }
 
-        if (calibrationCount >= CALIBRATION_SAMPLES) {
-          baseline = calibrationTotal / calibrationCount
+      if (baseline === null) {
+        const now = performance.now()
+        if (now - monitoringStartedAt < PLACEMENT_GRACE_MS) {
+          reportTelemetry(source, axis, null, raw)
+          return
+        }
+
+        if (Math.abs(axis) > FOREHEAD_MAX_TILT_DEGREES) {
+          if (calibrationValues.length > 0) {
+            calibrationValues = []
+            calibrationStartedAt = null
+            setCalibrationSamples(0)
+          }
+          reportTelemetry(source, axis, null, raw)
+          return
+        }
+
+        calibrationStartedAt ??= now
+        calibrationValues.push(axis)
+
+        const lowestSample = Math.min(...calibrationValues)
+        const highestSample = Math.max(...calibrationValues)
+        if (highestSample - lowestSample > FOREHEAD_STABILITY_DEGREES) {
+          calibrationValues = [axis]
+          calibrationStartedAt = now
+        }
+
+        setCalibrationSamples(
+          Math.min(calibrationValues.length, FOREHEAD_MIN_SAMPLES),
+        )
+        const calibration = getForeheadCalibration(
+          calibrationValues,
+          now - calibrationStartedAt,
+        )
+
+        if (calibration !== null) {
+          baseline = calibration
           setSensorReady(true)
+          onSensorReady()
           reportTelemetry(source, axis, axis - baseline, raw, true)
         } else {
           reportTelemetry(source, axis, null, raw)
@@ -275,12 +326,16 @@ export const useTiltControls = ({
       window.removeEventListener('deviceorientation', handleOrientation)
       window.removeEventListener('devicemotion', handleMotion)
       setSensorReady(false)
+      setSensorDetected(false)
+      setCalibrationSamples(0)
       setTelemetry(null)
     }
   }, [calibrationVersion, enabled])
 
   return {
     sensorReady,
+    sensorDetected,
+    calibrationSamples,
     telemetry,
     recalibrate: () => setCalibrationVersion((version) => version + 1),
   }

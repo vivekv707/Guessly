@@ -47,6 +47,7 @@ import {
   type RoundState,
 } from './game/round'
 import {
+  FOREHEAD_MIN_SAMPLES,
   TILT_NEUTRAL_DEGREES,
   TILT_TRIGGER_DEGREES,
 } from './game/tilt'
@@ -58,7 +59,14 @@ import {
 } from './hooks/useTiltControls'
 import { playFeedback, primeFeedbackAudio } from './lib/feedback'
 
-type Screen = 'home' | 'setup' | 'ready' | 'countdown' | 'round' | 'results'
+type Screen =
+  | 'home'
+  | 'setup'
+  | 'ready'
+  | 'positioning'
+  | 'countdown'
+  | 'round'
+  | 'results'
 interface GameSettings {
   duration: number
   sound: boolean
@@ -472,6 +480,15 @@ function App() {
 
   const handleKeyboardAction = useEffectEvent(handleCardAction)
 
+  const handleSensorReady = () => {
+    if (screen !== 'positioning') {
+      return
+    }
+
+    setCountdown(3)
+    setScreen('countdown')
+  }
+
   useEffect(() => {
     if (screen !== 'round') {
       return
@@ -494,13 +511,21 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [screen])
 
-  const { sensorReady, telemetry, recalibrate } = useTiltControls({
+  const {
+    sensorReady,
+    sensorDetected,
+    calibrationSamples,
+    telemetry,
+    recalibrate,
+  } = useTiltControls({
     enabled:
+      screen === 'positioning' ||
       screen === 'countdown' ||
       (screen === 'round' && round?.status === 'playing'),
     actionsEnabled: screen === 'round' && round?.status === 'playing',
     debugEnabled: showTiltDebugger,
     onAction: handleCardAction,
+    onReady: handleSensorReady,
   })
 
   const selectDeck = (deckId: string) => {
@@ -526,8 +551,17 @@ function App() {
     wakeLockRef.current =
       (await navigator.wakeLock?.request('screen').catch(() => null)) ?? null
 
+    setScreen('positioning')
+  }
+
+  const startCountdownNow = () => {
     setCountdown(3)
     setScreen('countdown')
+  }
+
+  const cancelPlacement = () => {
+    void leaveGameMode()
+    setScreen('ready')
   }
 
   const endRound = () => {
@@ -833,11 +867,11 @@ function App() {
             <ArrowDown />
           </span>
         </div>
-        <p className="section-kicker">Phone to forehead</p>
+        <p className="section-kicker">One tap before it goes up</p>
         <h1>
-          Turn sideways.
+          Tap below.
           <br />
-          Hold it steady.
+          Then place it.
         </h1>
         <div className="tilt-legend">
           <span>
@@ -858,14 +892,78 @@ function App() {
           onClick={() => void prepareCountdown()}
         >
           <Check size={22} />
-          I'm ready
+          Get in position
         </button>
         <small className="ready-screen__note">
-          Touch controls stay on as a backup.
+          The countdown starts once the phone is steady.
         </small>
       </div>
     </div>
   )
+
+  const renderPositioning = () => {
+    const blockedMessage =
+      motionPermission === 'insecure'
+        ? 'Motion sensors require a secure connection.'
+        : motionPermission === 'denied'
+          ? 'Motion access was denied.'
+          : motionPermission === 'unavailable'
+            ? 'No motion sensor was found.'
+            : null
+
+    return (
+      <div
+        className="positioning-screen screen-enter"
+        style={getDeckStyle(selectedDeck)}
+      >
+        <div className="ready-screen__top">
+          <IconButton label="Back" onClick={cancelPlacement}>
+            <ArrowLeft size={21} />
+          </IconButton>
+          <Brand compact />
+          <span />
+        </div>
+        <main className="positioning-screen__content">
+          <div className="positioning-screen__phone" aria-hidden="true">
+            <Smartphone size={70} strokeWidth={1.8} />
+            <Crosshair size={28} strokeWidth={2.4} />
+          </div>
+          <p className="section-kicker">
+            {blockedMessage ? 'Touch controls ready' : 'Finding position'}
+          </p>
+          <h1>
+            {blockedMessage
+              ? 'Tilt controls are unavailable.'
+              : 'Place it on your forehead.'}
+          </h1>
+          <p className="positioning-screen__copy">
+            {blockedMessage ??
+              'Turn the phone sideways and hold steady. The countdown will start on its own.'}
+          </p>
+          {!blockedMessage && (
+            <div className="positioning-status" role="status" aria-live="polite">
+              <i />
+              {calibrationSamples > 0
+                ? `Hold steady (${calibrationSamples}/${FOREHEAD_MIN_SAMPLES})`
+                : 'Waiting for phone position'}
+            </div>
+          )}
+          {!sensorDetected && (
+            <button
+              className="primary-button primary-button--light"
+              type="button"
+              onClick={startCountdownNow}
+            >
+              <Play size={20} fill="currentColor" />
+              {blockedMessage
+                ? 'Start with touch controls'
+                : 'Start countdown now'}
+            </button>
+          )}
+        </main>
+      </div>
+    )
+  }
 
   const renderCountdown = () => (
     <div className="countdown-screen" style={getDeckStyle(selectedDeck)}>
@@ -954,30 +1052,32 @@ function App() {
           )}
         </main>
 
-        <div className="round-actions">
-          <button
-            className="round-action round-action--pass"
-            type="button"
-            onClick={() => handleCardAction('pass')}
-          >
-            <ArrowUp size={24} />
-            <span>
-              <small>Tilt up</small>
-              <strong>Pass</strong>
-            </span>
-          </button>
-          <button
-            className="round-action round-action--correct"
-            type="button"
-            onClick={() => handleCardAction('correct')}
-          >
-            <span>
-              <small>Tilt down</small>
-              <strong>Got it</strong>
-            </span>
-            <ArrowDown size={24} />
-          </button>
-        </div>
+        {!sensorReady && (
+          <div className="round-actions">
+            <button
+              className="round-action round-action--pass"
+              type="button"
+              onClick={() => handleCardAction('pass')}
+            >
+              <ArrowUp size={24} />
+              <span>
+                <small>Tilt up</small>
+                <strong>Pass</strong>
+              </span>
+            </button>
+            <button
+              className="round-action round-action--correct"
+              type="button"
+              onClick={() => handleCardAction('correct')}
+            >
+              <span>
+                <small>Tilt down</small>
+                <strong>Got it</strong>
+              </span>
+              <ArrowDown size={24} />
+            </button>
+          </div>
+        )}
 
         {lastOutcome && (
           <div className="answer-flash" aria-hidden="true">
@@ -1107,6 +1207,7 @@ function App() {
       {screen === 'home' && renderHome()}
       {screen === 'setup' && renderSetup()}
       {screen === 'ready' && renderReady()}
+      {screen === 'positioning' && renderPositioning()}
       {screen === 'countdown' && renderCountdown()}
       {screen === 'round' && renderRound()}
       {screen === 'results' && renderResults()}

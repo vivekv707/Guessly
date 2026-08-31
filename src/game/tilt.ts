@@ -9,6 +9,31 @@ const RADIANS_TO_DEGREES = 180 / Math.PI
 // Further increase thresholds to reduce sensitivity per user request
 export const TILT_TRIGGER_DEGREES = 30
 export const TILT_NEUTRAL_DEGREES = 12
+export const FOREHEAD_MAX_TILT_DEGREES = 25
+export const FOREHEAD_STABILITY_DEGREES = 6
+export const FOREHEAD_HOLD_MS = 600
+export const FOREHEAD_MIN_SAMPLES = 8
+
+export const getForeheadCalibration = (
+  samples: readonly number[],
+  elapsedMs: number,
+) => {
+  if (
+    samples.length < FOREHEAD_MIN_SAMPLES ||
+    elapsedMs < FOREHEAD_HOLD_MS ||
+    samples.some((sample) => Math.abs(sample) > FOREHEAD_MAX_TILT_DEGREES)
+  ) {
+    return null
+  }
+
+  const lowestSample = Math.min(...samples)
+  const highestSample = Math.max(...samples)
+  if (highestSample - lowestSample > FOREHEAD_STABILITY_DEGREES) {
+    return null
+  }
+
+  return samples.reduce((total, sample) => total + sample, 0) / samples.length
+}
 
 export const getFaceTiltDegrees = (
   beta: number | null,

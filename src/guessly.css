@@ -212,6 +212,7 @@ button:active {
 .home-intro h1,
 .deck-spotlight h1,
 .ready-screen h1,
+.positioning-screen h1,
 .score-hero h1 {
   margin: 0;
   font-family: 'Fredoka Variable', 'Trebuchet MS', sans-serif;
@@ -860,6 +861,7 @@ footer > span {
 }
 
 .ready-screen,
+.positioning-screen,
 .countdown-screen,
 .round-screen {
   position: fixed;
@@ -875,7 +877,8 @@ footer > span {
   background-size: 34px 34px;
 }
 
-.ready-screen {
+.ready-screen,
+.positioning-screen {
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: auto;
@@ -1026,6 +1029,88 @@ footer > span {
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
   font-weight: 650;
+}
+
+.positioning-screen__content {
+  display: flex;
+  width: min(620px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+  text-align: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.positioning-screen__phone {
+  position: relative;
+  display: grid;
+  width: 154px;
+  height: 98px;
+  margin-bottom: 32px;
+  color: var(--ink);
+  background: white;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 7px 7px 0 rgba(23, 35, 28, 0.5);
+  place-items: center;
+  transform: rotate(-3deg);
+  animation: placement-pulse 1.4s ease-in-out infinite;
+}
+
+.positioning-screen__phone > svg:first-child {
+  transform: rotate(90deg);
+}
+
+.positioning-screen__phone > svg:last-child {
+  position: absolute;
+  color: var(--deck-color);
+}
+
+.positioning-screen .section-kicker {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.positioning-screen h1 {
+  max-width: 580px;
+  font-size: 49px;
+  line-height: 1.02;
+}
+
+.positioning-screen__copy {
+  max-width: 480px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.positioning-status {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  min-height: 38px;
+  margin: 24px 0;
+  padding: 0 14px;
+  color: white;
+  font-size: 13px;
+  font-weight: 750;
+  background: rgba(23, 35, 28, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 6px;
+}
+
+.positioning-status i {
+  width: 9px;
+  height: 9px;
+  background: var(--lime);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(204, 240, 77, 0.7);
+  animation: sensor-pulse 1.3s ease-out infinite;
+}
+
+.positioning-screen .primary-button {
+  margin-top: 4px;
 }
 
 .countdown-screen {
@@ -1209,7 +1294,7 @@ footer > span {
   margin: 0;
   overflow-wrap: anywhere;
   font-family: 'Fredoka Variable', 'Trebuchet MS', sans-serif;
-  font-size: 68px;
+  font-size: 92px;
   font-weight: 640;
   line-height: 0.98;
 }
@@ -1810,6 +1895,16 @@ footer > span {
   50% { transform: translateY(5px); }
 }
 
+@keyframes placement-pulse {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-5px) rotate(-3deg); }
+}
+
+@keyframes sensor-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(204, 240, 77, 0.7); }
+  70%, 100% { box-shadow: 0 0 0 8px rgba(204, 240, 77, 0); }
+}
+
 @keyframes countdown-pop {
   0% { opacity: 0; transform: scale(0.72); }
   28% { opacity: 1; transform: scale(1.08); }
@@ -2099,12 +2194,27 @@ footer > span {
     font-size: 39px;
   }
 
+  .positioning-screen__content {
+    width: calc(100% - 32px);
+    padding-top: 20px;
+  }
+
+  .positioning-screen__phone {
+    width: 136px;
+    height: 88px;
+    margin-bottom: 27px;
+  }
+
+  .positioning-screen h1 {
+    font-size: 39px;
+  }
+
   .word-stage {
     padding-inline: 22px;
   }
 
   .word-stage h1 {
-    font-size: 46px;
+    font-size: 64px;
   }
 
   .round-actions {
@@ -2201,7 +2311,7 @@ footer > span {
   }
 
   .word-stage h1 {
-    font-size: 44px;
+    font-size: 78px;
   }
 
   .sensor-status {
@@ -2279,6 +2389,49 @@ footer > span {
     margin-top: 2px;
   }
 
+  .positioning-screen__content {
+    display: grid;
+    grid-template-columns: 150px minmax(270px, 1fr);
+    gap: 7px 36px;
+    width: min(760px, calc(100% - 88px));
+    padding: 58px 0 18px;
+    text-align: left;
+  }
+
+  .positioning-screen__phone {
+    grid-row: 1 / span 5;
+    width: 140px;
+    height: 90px;
+    margin: 0;
+  }
+
+  .positioning-screen .section-kicker,
+  .positioning-screen h1,
+  .positioning-screen__copy,
+  .positioning-status,
+  .positioning-screen .primary-button {
+    grid-column: 2;
+  }
+
+  .positioning-screen h1 {
+    font-size: 34px;
+  }
+
+  .positioning-screen__copy {
+    margin-top: 5px;
+  }
+
+  .positioning-status {
+    margin: 7px 0;
+    justify-self: start;
+  }
+
+  .positioning-screen .primary-button {
+    min-height: 48px;
+    margin-top: 1px;
+    justify-self: start;
+  }
+
   .countdown-screen__number {
     min-width: 140px;
     min-height: 140px;
@@ -2292,7 +2445,7 @@ footer > span {
 
 @media (max-height: 430px) and (orientation: landscape) {
   .word-stage h1 {
-    font-size: 37px;
+    font-size: 70px;
   }
 
   .sensor-status:not(:has(+ .tilt-debugger)) {

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FOREHEAD_HOLD_MS,
+  FOREHEAD_MIN_SAMPLES,
   getFaceTiltDegrees,
+  getForeheadCalibration,
   getMotionFaceTiltDegrees,
   getTiltOutcome,
   TILT_NEUTRAL_DEGREES,
@@ -34,5 +37,33 @@ describe('tilt controls', () => {
 
   it('keeps the neutral reset comfortably below the trigger', () => {
     expect(TILT_NEUTRAL_DEGREES).toBeLessThan(TILT_TRIGGER_DEGREES / 2)
+  })
+
+  it('calibrates only after the phone is vertical and steady', () => {
+    const stableSamples = Array.from(
+      { length: FOREHEAD_MIN_SAMPLES },
+      (_, index) => 2 + (index % 2),
+    )
+
+    expect(getForeheadCalibration(stableSamples, FOREHEAD_HOLD_MS - 1)).toBeNull()
+    expect(
+      getForeheadCalibration(stableSamples.slice(1), FOREHEAD_HOLD_MS),
+    ).toBeNull()
+    expect(
+      getForeheadCalibration(
+        Array.from({ length: FOREHEAD_MIN_SAMPLES }, () => 55),
+        FOREHEAD_HOLD_MS,
+      ),
+    ).toBeNull()
+    expect(
+      getForeheadCalibration(
+        Array.from(
+          { length: FOREHEAD_MIN_SAMPLES },
+          (_, index) => (index % 2 === 0 ? -5 : 5),
+        ),
+        FOREHEAD_HOLD_MS,
+      ),
+    ).toBeNull()
+    expect(getForeheadCalibration(stableSamples, FOREHEAD_HOLD_MS)).toBe(2.5)
   })
 })
