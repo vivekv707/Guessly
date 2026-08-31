@@ -21,6 +21,7 @@ import {
   Share2,
   Smartphone,
   Sparkles,
+  Swords,
   Trophy,
   Volume2,
   VolumeX,
@@ -57,7 +58,11 @@ import {
   type SensorPermission,
   type TiltTelemetry,
 } from './hooks/useTiltControls'
-import { playFeedback, primeFeedbackAudio } from './lib/feedback'
+import {
+  playFeedback,
+  playPositionReadyFeedback,
+  primeFeedbackAudio,
+} from './lib/feedback'
 
 type Screen =
   | 'home'
@@ -120,6 +125,8 @@ const DeckGlyph = ({ icon, size = 28 }: { icon: DeckIcon; size?: number }) => {
     wild: PawPrint,
     world: Earth,
     action: Hand,
+    anime: Swords,
+    pokemon: Zap,
   }
   const Icon = icons[icon]
   return <Icon aria-hidden="true" size={size} strokeWidth={2.2} />
@@ -485,6 +492,7 @@ function App() {
       return
     }
 
+    playPositionReadyFeedback(settings.haptics)
     setCountdown(3)
     setScreen('countdown')
   }
@@ -641,7 +649,7 @@ function App() {
         <section className="home-intro">
           <div className="home-intro__copy">
             <p className="eyebrow">
-              <Zap size={15} /> Five decks. Zero paywalls.
+              <Zap size={15} /> {decks.length} decks. Zero paywalls.
             </p>
             <h1>
               Pick the vibe.<br />

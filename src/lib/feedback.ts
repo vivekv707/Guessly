@@ -18,6 +18,12 @@ export const primeFeedbackAudio = async (enabled: boolean) => {
   }
 }
 
+export const playPositionReadyFeedback = (hapticsEnabled: boolean) => {
+  if (hapticsEnabled && 'vibrate' in navigator) {
+    navigator.vibrate([55, 45, 100])
+  }
+}
+
 export const playFeedback = (
   outcome: CardOutcome,
   soundEnabled: boolean,

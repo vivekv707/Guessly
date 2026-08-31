@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { decks } from './decks'
 
 describe('deck catalog', () => {
-  it('ships five substantial starting decks', () => {
-    expect(decks).toHaveLength(5)
+  it('ships seven substantial starting decks', () => {
+    expect(decks).toHaveLength(7)
     expect(decks.every((deck) => deck.words.length >= 50)).toBe(true)
   })
 
