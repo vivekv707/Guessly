@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Guessly - Party Guessing Game",
   "short_name": "Guessly",
-  "description": "A fast, free forehead guessing game for friends with five original decks.",
+  "description": "A fast, free forehead guessing game for friends with 15 themed decks and 810 cards.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

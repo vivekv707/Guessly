@@ -1,4 +1,4 @@
-const CACHE_NAME = 'guessly-v2'
+const CACHE_NAME = 'guessly-v3'
 const CORE_ASSETS = [
   './manifest.webmanifest',
   './pwa-64x64.png',
